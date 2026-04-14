@@ -33,7 +33,9 @@ resource "aws_apigatewayv2_route" "default" {
   api_id             = aws_apigatewayv2_api.this.id
   route_key          = "$default"
   target             = "integrations/${aws_apigatewayv2_integration.this.id}"
-  authorization_type = var.authorizer != null ? var.authorizer.authorizer_type : "NONE"
+  authorization_type = var.authorizer == null ? "NONE" : (
+    var.authorizer.authorizer_type == "REQUEST" ? "CUSTOM" : var.authorizer.authorizer_type
+  )
   authorizer_id      = var.authorizer != null && var.authorizer.authorizer_type != "AWS_IAM" ? aws_apigatewayv2_authorizer.this[0].id : null
 }
 
