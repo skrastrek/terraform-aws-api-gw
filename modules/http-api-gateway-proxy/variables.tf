@@ -26,13 +26,19 @@ variable "cors_configuration" {
 
 variable "integration_uri" {
   type        = string
-  description = "URI of the backend to proxy requests to."
+  description = "URI of the backend. Lambda invocation ARN for AWS_PROXY, or HTTP URL for HTTP_PROXY."
+}
+
+variable "integration_type" {
+  type        = string
+  default     = "AWS_PROXY"
+  description = "Integration type. AWS_PROXY for Lambda, HTTP_PROXY for HTTP backends."
 }
 
 variable "integration_method" {
   type        = string
-  default     = "ANY"
-  description = "HTTP method used for the integration."
+  default     = "POST"
+  description = "HTTP method used for the integration. Must be POST for AWS_PROXY (Lambda)."
 }
 
 variable "payload_format_version" {
@@ -44,7 +50,7 @@ variable "payload_format_version" {
 variable "connection_type" {
   type        = string
   default     = "INTERNET"
-  description = "Integration connection type. INTERNET or VPC_LINK."
+  description = "Integration connection type. INTERNET or VPC_LINK. Only applies to HTTP_PROXY."
 }
 
 variable "connection_id" {
@@ -98,6 +104,22 @@ variable "custom_domain_base_path_mapping" {
   type        = string
   default     = null
   description = "Path segment that must be prepended to the path when accessing the API. If null, the API is exposed at the root of the given domain."
+}
+
+variable "authorizer" {
+  type = object({
+    authorizer_type                   = string # JWT, REQUEST, or AWS_IAM
+    identity_sources                  = optional(list(string))
+    authorizer_uri                    = optional(string) # Lambda invoke ARN, for REQUEST type
+    authorizer_payload_format_version = optional(string, "2.0")
+    authorizer_result_ttl_in_seconds  = optional(number, 300)
+    enable_simple_responses           = optional(bool, false)
+    jwt_configuration = optional(object({
+      audience = list(string)
+      issuer   = string
+    }))
+  })
+  default = null
 }
 
 variable "auto_deploy" {

@@ -15,18 +15,27 @@ resource "aws_api_gateway_resource" "proxy" {
   path_part   = "{proxy+}"
 }
 
+locals {
+  method_authorization = var.authorizer == null ? "NONE" : (
+    contains(["TOKEN", "REQUEST"], var.authorizer.type) ? "CUSTOM" : var.authorizer.type
+  )
+  method_authorizer_id = var.authorizer != null && var.authorizer.type != "AWS_IAM" ? aws_api_gateway_authorizer.this[0].id : null
+}
+
 resource "aws_api_gateway_method" "proxy" {
   rest_api_id   = aws_api_gateway_rest_api.this.id
   resource_id   = aws_api_gateway_resource.proxy.id
   http_method   = "ANY"
-  authorization = "NONE"
+  authorization = local.method_authorization
+  authorizer_id = local.method_authorizer_id
 }
 
 resource "aws_api_gateway_method" "root" {
   rest_api_id   = aws_api_gateway_rest_api.this.id
   resource_id   = aws_api_gateway_rest_api.this.root_resource_id
   http_method   = "ANY"
-  authorization = "NONE"
+  authorization = local.method_authorization
+  authorizer_id = local.method_authorizer_id
 }
 
 resource "aws_api_gateway_integration" "proxy" {
@@ -34,10 +43,10 @@ resource "aws_api_gateway_integration" "proxy" {
   resource_id             = aws_api_gateway_resource.proxy.id
   http_method             = aws_api_gateway_method.proxy.http_method
   integration_http_method = var.integration_http_method
-  type                    = "HTTP_PROXY"
-  uri                     = "${var.integration_uri}/{proxy}"
-  connection_type         = var.connection_type
-  connection_id           = var.connection_type == "VPC_LINK" ? var.connection_id : null
+  type                    = var.integration_type
+  uri                     = var.integration_type == "HTTP_PROXY" ? "${var.integration_uri}/{proxy}" : var.integration_uri
+  connection_type         = var.integration_type == "HTTP_PROXY" ? var.connection_type : null
+  connection_id           = var.integration_type == "HTTP_PROXY" && var.connection_type == "VPC_LINK" ? var.connection_id : null
 }
 
 resource "aws_api_gateway_integration" "root" {
@@ -45,10 +54,10 @@ resource "aws_api_gateway_integration" "root" {
   resource_id             = aws_api_gateway_rest_api.this.root_resource_id
   http_method             = aws_api_gateway_method.root.http_method
   integration_http_method = var.integration_http_method
-  type                    = "HTTP_PROXY"
+  type                    = var.integration_type
   uri                     = var.integration_uri
-  connection_type         = var.connection_type
-  connection_id           = var.connection_type == "VPC_LINK" ? var.connection_id : null
+  connection_type         = var.integration_type == "HTTP_PROXY" ? var.connection_type : null
+  connection_id           = var.integration_type == "HTTP_PROXY" && var.connection_type == "VPC_LINK" ? var.connection_id : null
 }
 
 resource "aws_api_gateway_method_settings" "all" {

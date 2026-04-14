@@ -4,19 +4,25 @@ variable "name" {
 
 variable "integration_uri" {
   type        = string
-  description = "URI of the backend to proxy requests to."
+  description = "URI of the backend. Lambda invocation ARN for AWS_PROXY, or HTTP URL for HTTP_PROXY."
+}
+
+variable "integration_type" {
+  type        = string
+  default     = "AWS_PROXY"
+  description = "Integration type. AWS_PROXY for Lambda, HTTP_PROXY for HTTP backends."
 }
 
 variable "integration_http_method" {
   type        = string
-  default     = "ANY"
-  description = "HTTP method used for the integration."
+  default     = "POST"
+  description = "HTTP method used for the integration. Must be POST for AWS_PROXY (Lambda)."
 }
 
 variable "connection_type" {
   type        = string
   default     = "INTERNET"
-  description = "Integration connection type. INTERNET or VPC_LINK."
+  description = "Integration connection type. INTERNET or VPC_LINK. Only applies to HTTP_PROXY."
 }
 
 variable "connection_id" {
@@ -135,6 +141,18 @@ variable "custom_domain_base_path_mapping" {
   type        = string
   default     = null
   description = "Path segment that must be prepended to the path when accessing the API. If null, the API is exposed at the root of the given domain."
+}
+
+variable "authorizer" {
+  type = object({
+    type                           = string # TOKEN, REQUEST, COGNITO_USER_POOLS, or AWS_IAM
+    authorizer_uri                 = optional(string) # Lambda invoke ARN, for TOKEN/REQUEST types
+    identity_source                = optional(string, "method.request.header.Authorization")
+    result_ttl_in_seconds          = optional(number, 300)
+    identity_validation_expression = optional(string) # TOKEN type only
+    provider_arns                  = optional(list(string)) # COGNITO_USER_POOLS type only
+  })
+  default = null
 }
 
 variable "auto_redeploy" {
